@@ -1,35 +1,48 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from "react";
+import { supabaseClient } from "../supabaseClient.js";
+import { Auth } from "@supabase/auth-ui-react";
+import { ThemeSupa } from "@supabase/auth-ui-shared";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [session, setSession] = useState(null);
+  useEffect(() => {
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+    const {
+      data: { subscription },
+    } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+  const signOut = async () => {
+    const { error } = await supabaseClient.auth.signOut();
+  };
+
+  const signUp = async () => {
+    await supabaseClient.auth.signInWithOAuth({
+      provider: "google",
+    });
+  };
+
+  if (!session) {
+    return (
+      <>
+        {/* <Auth supabaseClient={supabaseClient} appearance={{ theme: ThemeSupa }} /> */}
+        <button onClick={signUp}>Sign up with google</button>
+      </>
+    );
+  } else {
+    return (
+      <>
+        <div>Welcome, {session?.user?.user_metadata?.name}</div>
+        <button onClick={signOut}>Sign Out</button>
+      </>
+    );
+  }
 }
 
-export default App
+export default App;
